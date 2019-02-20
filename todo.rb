@@ -10,6 +10,7 @@ module Menu
       4) Show
       5) Write to a file
       6) View a file
+      7) Toggle
       Q) Quit "
   end
 
@@ -19,7 +20,7 @@ module Menu
 end
 
 module Promptable
-  # method for promting user input
+  # method for promting for user input
   def prompt(message = 'What would you like to do?', symbol = ':>')
     print message
     print symbol
@@ -29,7 +30,7 @@ end
 
 # Classes
 class List
-
+  #initializing the instance variable all_tasks
   attr_reader :all_tasks
   def initialize
     @all_tasks = []
@@ -39,47 +40,74 @@ class List
     all_tasks << task
   end
 
-  def remove(num)
+  def remove(num) # removes a task from the all_tasks array
     num = num.to_i
     num -= 1
 
     all_tasks.delete_at(num)
   end
 
-  def update(task_num, task)
+  def update(task_num, task) # updates an existing task
     all_tasks[task_num - 1] = task
   end
 
   def show # nubers each task in output
-    i = 1
+    i = 0
     all_tasks.each do |task|
-      puts "#{i.to_s}) #{task} "
+      puts "#{i.next}) : #{task}"
 
       i += 1
     end
   end
 
-  def write_to_file(filename) # creats a file of the all_tasks array in directory of the program.
-    IO.write(filename, @all_tasks.map(&:to_s).join("\n"))
+  def toggle(task_num) # toggles the comepletion status of a task
+    all_tasks[task_num.to_i - 1].toggle_status
   end
 
-  def read_from_file(filename) # outputs a files contents
-        IO.readlines(filename).each do |line|
-          puts line.chomp
-        end
-      end
+  def write_to_file(filename) # writes the task list to a new or existing file
+     machinified = all_tasks.map(&:to_machine).join("\n")
+     IO.write(filename, machinified)
+  end
+
+  def read_from_file(filename) # grabs the task list from an existing file
+    IO.readlines(filename).each do |line|
+      status, *description = line.split(':')
+      status = status.downcase.include?('x')
+      add(Task.new(description.join(':').strip, status))
+    end
+  end
 
 end
 
 class Task
-
-  attr_accessor :description
-  def initialize(description)
+  # initializes the instance variables description and completed_status
+  attr_reader :description
+  attr_accessor :completed_status
+  def initialize(description, completed_status = false)
     @description = description
+    @completed_status = completed_status
   end
 
-  def to_s # turns the task decription into a string
-    description
+  def to_s # turns the task decription into a string and gives it a comepletion status
+    "#{represent_status} : #{description}"
+  end
+
+  def completed? # checks is a tasks status is completed
+    completed_status
+  end
+
+  def to_machine # used for writing to file method, it formats to description and task status
+                 # so it is ready to be writen to a file
+    "#{represent_status} : #{description}"
+  end
+
+  def toggle_status # toggles completion status
+    @completed_status = !completed?
+  end
+
+  private
+  def represent_status # defines to completed task switch
+    completed? ? '[X]' : '[ ]'
   end
 
 
@@ -120,11 +148,9 @@ if __FILE__ == $PROGRAM_NAME
           puts ''
 
         when '4'
-
-          my_list.show
+          puts my_list.show
 
         when '5'
-
           my_list.write_to_file(prompt('Choose a name for your file.'))
 
           puts ''
@@ -132,17 +158,15 @@ if __FILE__ == $PROGRAM_NAME
           puts ''
 
         when '6'
-
           begin
-            my_list.read_from_file(prompt('What is the filename to
-            read from?'))
-
-          rescue Errno::ENOENT # erro checks if the file entered exists
-            puts 'File name not found, please verify your file name
-            and path and try again.'
-
-
+            my_list.read_from_file(prompt('What is the filename to read from?'))
+          rescue Errno::ENOENT
+            puts 'File name not found, please verify your filename and path.'
           end
+
+        when '7'
+          puts my_list.show
+          my_list.toggle(prompt('Choose a task.').to_i)
 
         else
 
@@ -150,7 +174,7 @@ if __FILE__ == $PROGRAM_NAME
         puts 'Try again, I did not understand.'
         puts ''
       end
-
+      prompt('Press enter to continue.', '')
     end
 
    puts ''
